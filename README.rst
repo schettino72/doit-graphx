@@ -2,31 +2,27 @@
 doit-graphx
 ===========
 
-Command plugin to generate graphs of [doit](http://pydoit.org)
-tasks using [NetworkX](http://networkx.github.io).
+Command plugin to generate graphical or textual graphs of [doit](http://pydoit.org)
+task-dependencies using [NetworkX](http://networkx.github.io).
 
 
 
 Install
 -------
+Requires *doit* version >= 0.28, `networkx` and `matplotlib`::
 
-Requires *doit* version >= 0.28.
-
-XXX
+  pip install git+https://github.com/pydoit/doit-graphx.git
 
 
 Usage
 -----
-
-To activate this plugin add a file named `doit.cfg` into root of
-your project with the following content.
-
-::
+To activate this plugin add a file named :file:`doit.cfg` into root of
+your project with the following content::
 
   [command]
-  Graphx@doitgraphx
+  Graphx@cmd_graphx
 
 
-Now you can just use the `graphx` command.
+Now you can just use the `graphx` command::
 
-`doit graphx`
+  doit graphx

@@ -31,7 +31,8 @@ setup(name = 'doit-graphx',
         'Topic :: Scientific/Engineering',
         ],
 
-      py_modules = ['doitgraphx'],
-      #install_requires = [doit>=0.28.0] # doit 0.28 unreleased
+      py_modules = ['cmd_graphx'],
+    install_requires = ['networkx', 'matplotlib'],
+                        #doit>=0.28.0] # doit 0.28 unreleased
       long_description = "",
       )
