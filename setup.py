@@ -32,6 +32,7 @@ setup(name='doit-graphx',
       ],
 
       py_modules=['cmd_graphx'],
+      # TODO: Fatcor-out matplotlib in an extra-requires.
       install_requires=['networkx', 'matplotlib'],
       # doit>=0.28.0] # doit 0.28 unreleased
       long_description="",

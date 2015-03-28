@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import os
 from doit import cmd_base
 from doit.cmd_base import DoitCmdBase
 from doit.exceptions import InvalidCommand
@@ -11,10 +12,33 @@ from textwrap import dedent
 
 import six
 
+import networkx as nx
+import sys
+from _functools import partial
 
-def _draw_matplotlib_graph(graph, template, show_status):
-    import networkx as nx
+
+def _match_prefix(items, prefix):
+    """
+    Utility function for detexting ambiguous prefixes
+
+    :return:    which one of `items` starts with `prefix` unambiguously, 
+                or None none matched
+    :raises ValueError: if `prefix` matches multiple matched in `items`
+    """
+    matched = [i for i in items if i.startswith(prefix)]
+    if matched:
+        if len(matched) > 1:
+            msg = "prefix '{}' matched {}; must be one of {}"
+            raise ValueError(msg.format(prefix, matched, sorted(items)))
+        return matched[0]
+
+
+def _draw_matplotlib_graph(graph, _, disp_params, **kws):
+    # TODO: maplotlib ignores fname
     from matplotlib import pyplot as plt
+
+    template = disp_params['template']
+    show_status = disp_params['show_status']
 
     def find_node_attr(g, attr, value):
         return [n for n, d in g.nodes_iter(data=True) if d[attr] == value]
@@ -70,7 +94,30 @@ def _draw_matplotlib_graph(graph, template, show_status):
     plt.show()
 
 
-SUPPORTED_GRAPH_TYPES = {'matplotlib': _draw_matplotlib_graph}
+def _store_json(graph, fname, disp_params, **kws):
+    import json
+    # TODO: obey disp_params
+    m = nx.to_dict_of_dicts(graph)
+    json.dump(m, fname, **kws)
+
+
+def _call_nx_write_func(func, graph, fname, disp_params, **kws):
+    """Just consumes `disp_params` which is used by json & matplotlib"""
+    func(graph, fname, **kws)
+
+
+def _add_all_supported_output_formats():
+    """Add all `nx.write_XXX()` methods plus json & matplotlib funcs, above."""
+    prefix = 'write_'
+    formats = {m[len(prefix):]: partial(_call_nx_write_func, getattr(nx, m))
+               for m in dir(nx) if m.startswith(prefix)}
+    formats['json'] = _store_json
+    formats['matplotlib'] = _draw_matplotlib_graph
+    return formats
+
+# FIXME: Discover import-time for help-strings
+#     (Cmd.doc_description should be a function
+SUPPORTED_GRAPH_TYPES = _add_all_supported_output_formats()
 
 
 opt_subtasks = {
@@ -119,7 +166,8 @@ opt_show_status = {
     'long': 'status',
     'type': bool,
     'default': False,
-    'help': 'read task-status (R)un, (U)p-to-date, (I)gnored (see `--template`)'
+    'help': "read task-status (R)un, (U)p-to-date, (I)gnored"
+            " (matplotlib-only, see `--template`)"
 }
 
 opt_template = {
@@ -128,7 +176,8 @@ opt_template = {
     'long': 'template',
     'type': str,
     'default': None,
-    'help': "template for task-labels (use %s to get all keywords)"
+    'help': "template for task-labels "
+            "(matplotlib-only, use %s to get all keywords)"
 }
 
 opt_graph_type = {
@@ -138,7 +187,7 @@ opt_graph_type = {
     'type': str,
     'default': 'matplotlib',
     'help': "selection of graph library"
-            " (one of: %s)." % list(SUPPORTED_GRAPH_TYPES)
+            " (one of: %s)." % sorted(SUPPORTED_GRAPH_TYPES)
 }
 
 opt_out_file = {
@@ -146,8 +195,8 @@ opt_out_file = {
     'short': 'O',
     'long': 'out-file',
     'type': str,
-    'default': False,
-    'help': "TODO: where to store graph, if textual"
+    'default': '-',
+    'help': "where to store graph, if textual"
 }
 
 
@@ -215,36 +264,36 @@ class Graphx(DoitCmdBase):
             task_status = dep_manager.get_status(task, None)
         return Graphx.STATUS_MAP[task_status]
 
+    @staticmethod
+    def _filter_dep_attributes_to_collect(dep_attributes, filter_deps):
+        filter_deps = re.sub(r'[\s,|]+', ' ', filter_deps).strip()
+        if not filter_deps:
+            return dep_attributes
+        else:
+            dep_attributes_out = {}
+            dep_names = sorted(dep_attributes)
+            for f_dep in filter_deps.split():
+                try:
+                    f_dep = _match_prefix(dep_names, f_dep)
+                except ValueError as ex:
+                    raise InvalidCommand("graph-type %s" % ex.args[0])
+                else:
+                    if not f_dep:
+                        msg = "Unsupported dependency-type '%s'; should be one: %s"
+                        raise InvalidCommand(msg % (f_dep, dep_names))
+                    if 'all' == f_dep:
+                        return dep_attributes
+                    elif 'none' == f_dep:
+                        return {}
+                    dep_attributes_out[f_dep] = dep_attributes[f_dep]
+                return dep_attributes_out
+
     def _prepare_graph(self, all_tasks_map, filter_task_names, filter_deps, show_status):
         """
         Construct a *networkx* graph of nodes (Tasks/Files/Wildcards) and their dependencies (file/wildcard, task/setup,calc).
 
         :param filter_task_names: If None, graph includes all tasks
         """
-        import networkx as nx
-
-        def _filter_dependencies_to_collect(dep_attributes, filter_deps):
-            filter_deps = re.sub(r'[\s,|]+', ' ', filter_deps).strip()
-            if not filter_deps:
-                return dep_attributes
-            else:
-                dep_attributes_out = {}
-                for f_dep in filter_deps.split():
-                    if 'all'.startswith(f_dep):
-                        return dep_attributes
-                    elif 'none'.startswith(f_dep):
-                        return {}
-                    else:
-                        matched = {dep: dep_kws
-                                   for dep, dep_kws
-                                   in six.iteritems(dep_attributes)
-                                   if dep.startswith(f_dep)}
-                        if not matched:
-                            msg = "Unsupported dep-type '%s'; should be one : %s"
-                            raise InvalidCommand(
-                                msg % (f_dep, list(dep_attributes)))
-                        dep_attributes_out.update(matched)
-                return dep_attributes_out
 
         dep_attributes = {
             'task_dep':     {'node_type': 'task'},
@@ -254,7 +303,7 @@ class Graphx(DoitCmdBase):
             'wild_dep':     {'node_type': 'wildcard'},
         }
 
-        dep_attributes = _filter_dependencies_to_collect(
+        dep_attributes = Graphx._filter_dep_attributes_to_collect(
             dep_attributes, filter_deps)
 
         graph = nx.DiGraph()
@@ -282,7 +331,7 @@ class Graphx(DoitCmdBase):
                     # Above loop cannot add targets
                     #    because they are reversed.
                     #
-                    # FIX: Targets are not filtered!!
+                    # FIX: Targets are not filtered-out!!
                     for dname in task.targets:
                         add_graph_node(dname, 'file')
                         graph.add_edge(dname, node, type='target')
@@ -295,19 +344,41 @@ class Graphx(DoitCmdBase):
 
         return graph
 
-    def _display_graph(self, graph, graph_type, template, show_status, out_file):
-        for gtype in SUPPORTED_GRAPH_TYPES:
-            if gtype.startswith(graph_type):
-                func = SUPPORTED_GRAPH_TYPES[gtype]
-                func(graph, template, show_status)
-                break
+    def _select_graph_func(self, graph, graph_type):
+        graph_names = sorted(SUPPORTED_GRAPH_TYPES)
+        try:
+            matched_graph_type = _match_prefix(graph_names, graph_type)
+        except ValueError as ex:
+            raise InvalidCommand("graph-type %s" % ex.args[0])
         else:
-            msg = "Unsupported graph-type '%s'; should be one : %s"
-            raise InvalidCommand(
-                msg % (graph_type, list(SUPPORTED_GRAPH_TYPES)))
+            if not matched_graph_type:
+                msg = "Unsupported graph-type '%s'; should be one: %s"
+                raise InvalidCommand(msg % (graph_type, graph_names))
+            else:
+                func = SUPPORTED_GRAPH_TYPES[matched_graph_type]
 
-    def _execute(self, subtasks, no_children, show_status, private,
-                 deps, template, graph_type, out_file, pos_args=None):
+                return matched_graph_type, func
+
+    def _prepare_out_file(self, fname, ext):
+        """Appends extension(dot included) if `fname` has'nt got one, or `stdout` if was '-'."""
+        if '-' == fname:
+            return self.outstream
+
+        _, e = os.path.splitext(fname)
+        if e:
+            ext = ''
+        return fname + ext
+
+    def _execute(self,
+                 subtasks=opt_subtasks['default'],
+                 no_children=opt_no_children['default'],
+                 private=opt_private['default'],
+                 show_status=opt_show_status['default'],
+                 deps=opt_deps['default'],
+                 template=opt_template['default'],
+                 graph_type=opt_graph_type['default'],
+                 out_file=opt_out_file['default'],
+                 pos_args=None):
         task_names = pos_args
         tasks_map = dict([(t.name, t) for t in self.task_list])
 
@@ -320,5 +391,9 @@ class Graphx(DoitCmdBase):
                     tasks_map, task_names, subtasks)
 
         graph = self._prepare_graph(tasks_map, task_names, deps, show_status)
-
-        self._display_graph(graph, graph_type, template, show_status, out_file)
+        graph_type, func = self._select_graph_func(graph, graph_type)
+        out_file = self._prepare_out_file(out_file, graph_type)
+        disp_params = dict(zip(['graph_type', 'show_status', 'deps', 'template'],
+                               [graph_type, show_status, deps, template]))
+        kws = {}  # TODO: kws not used yet.
+        func(graph, out_file, disp_params, **kws)
