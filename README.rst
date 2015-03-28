@@ -20,7 +20,7 @@ To activate this plugin add a file named :file:`doit.cfg` into root of
 your project with the following content::
 
   [command]
-  Graphx@cmd_graphx
+  cmd_graphx:Graphx
 
 
 Now you can just use the `graphx` command::
