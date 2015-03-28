@@ -17,54 +17,55 @@ def _draw_matplotlib_graph(graph, template, show_status):
     from matplotlib import pyplot as plt
 
     def find_node_attr(g, attr, value):
-        return [n for n,d in g.nodes_iter(data=True) if d[attr] == value]
+        return [n for n, d in g.nodes_iter(data=True) if d[attr] == value]
+
     def find_edge_attr(g, attr, value):
-        return [(n1,n2) for n1,n2,d in g.edges_iter(data=True) if d[attr] == value]
+        return [(n1, n2) for n1, n2, d in g.edges_iter(data=True) if d[attr] == value]
 
     node_type_styles = {
-        'task':     { 'node_color': 'g', 'node_shape': 's'},
-        'file':     { 'node_color': 'b', 'node_shape': 'o'},
-        'wildcard': { 'node_color': 'c', 'node_shape': '8'},
+        'task':     {'node_color': 'g', 'node_shape': 's'},
+        'file':     {'node_color': 'b', 'node_shape': 'o'},
+        'wildcard': {'node_color': 'c', 'node_shape': '8'},
     }
     dep_type_styles = {
-        ## TASK-dependencies
-        'task_dep': { 'edge_color': 'k', 'style': 'dotted'},
-        'setup_dep':{ 'edge_color': 'm', },
-        'calc_dep': { 'edge_color': 'g', },
-        ## DATA-dependencies
-        'file_dep': { 'edge_color': 'b', },
-        'wild_dep': { 'edge_color': 'b', 'style': 'dashed'},
-        'target':   { 'edge_color': 'c', },
+        # TASK-dependencies
+        'task_dep': {'edge_color': 'k', 'style': 'dotted'},
+        'setup_dep': {'edge_color': 'm', },
+        'calc_dep': {'edge_color': 'g', },
+        # DATA-dependencies
+        'file_dep': {'edge_color': 'b', },
+        'wild_dep': {'edge_color': 'b', 'style': 'dashed'},
+        'target':   {'edge_color': 'c', },
     }
 
     pos = nx.spring_layout(graph, dim=2)
     for item_type, style in six.iteritems(node_type_styles):
-        nodes       = find_node_attr(graph, 'type', item_type)
+        nodes = find_node_attr(graph, 'type', item_type)
         nx.draw_networkx_nodes(graph, pos, nodes,
                                label=item_type, alpha=0.8,
                                **style)
     for item_type, style in six.iteritems(dep_type_styles):
-        edges       = find_edge_attr(graph, 'type', item_type)
-        edge_col    = nx.draw_networkx_edges(graph, pos, edges,
-                               label=item_type, alpha=0.5,
-                               **style)
+        edges = find_edge_attr(graph, 'type', item_type)
+        edge_col = nx.draw_networkx_edges(graph, pos, edges,
+                                          label=item_type, alpha=0.5,
+                                          **style)
         if edge_col:
-            edge_col.set_label(None)    ## Remove duplicate label on DiGraph.
+            edge_col.set_label(None)  # Remove duplicate label on DiGraph.
 
     if template is None:
         template = '{name}'
         if show_status:
             template = '({status})' + template
     labels = {n: (template.format(name=n, **d) if d['type'] == 'task' else n)
-                   for n,d in graph.nodes_iter(data=True)}
+              for n, d in graph.nodes_iter(data=True)}
     nx.draw_networkx_labels(graph, pos, labels)
-    
+
     ax = plt.gca()
     ax.legend(scatterpoints=1, framealpha=0.5)
-    #ax.set_frame_on(False)
+    # ax.set_frame_on(False)
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
-    plt.subplots_adjust(0,0,1,1)
+    plt.subplots_adjust(0, 0, 1, 1)
 
     plt.show()
 
@@ -74,13 +75,13 @@ SUPPORTED_GRAPH_TYPES = {'matplotlib': _draw_matplotlib_graph}
 
 opt_subtasks = {
     'name': 'subtasks',
-    'short':'b',
+    'short': 'b',
     'long': 'subtasks',
     'type': bool,
     'default': False,
     'help': "include also sub-tasks"
             "(applies when task-list given)"
-    }
+}
 
 opt_private = {
     'name': 'private',
@@ -90,17 +91,17 @@ opt_private = {
     'default': False,
     'help': "include also private tasks starting with '_'"
             " (applies when task-list given)"
-    }
+}
 
 opt_no_children = {
     'name': 'no_children',
-    'short':'c',
+    'short': 'c',
     'long': 'no-children',
     'type': bool,
     'default': False,
     'help': "TODO: include only selected tasks"
             " (applies when task-list given)"
-    }
+}
 
 opt_deps = {
     'name': 'deps',
@@ -110,7 +111,7 @@ opt_deps = {
     'default': '',
     'help': "type of dependencies to include from selected tasks"
             " (list of: ALL|file|wild|task|calc|setup|none|TODO:target)"
-    }
+}
 
 opt_show_status = {
     'name': 'show_status',
@@ -119,7 +120,7 @@ opt_show_status = {
     'type': bool,
     'default': False,
     'help': 'read task-status (R)un, (U)p-to-date, (I)gnored (see `--template`)'
-    }
+}
 
 opt_template = {
     'name': 'template',
@@ -128,7 +129,7 @@ opt_template = {
     'type': str,
     'default': None,
     'help': "template for task-labels (use %s to get all keywords)"
-    }
+}
 
 opt_graph_type = {
     'name': 'graph_type',
@@ -137,8 +138,8 @@ opt_graph_type = {
     'type': str,
     'default': 'matplotlib',
     'help': "selection of graph library"
-            " (one of: %s)." % list(SUPPORTED_GRAPH_TYPES) 
-    }
+            " (one of: %s)." % list(SUPPORTED_GRAPH_TYPES)
+}
 
 opt_out_file = {
     'name': 'out_file',
@@ -147,7 +148,7 @@ opt_out_file = {
     'type': str,
     'default': False,
     'help': "TODO: where to store graph, if textual"
-    }
+}
 
 
 def my_safe_repr(obj, context, maxlevels, level):
@@ -163,6 +164,7 @@ def my_safe_repr(obj, context, maxlevels, level):
 
 
 class Graphx(DoitCmdBase):
+
     """command doit graph"""
 
     doc_purpose = "display a dependency-graph for all (or selected ) tasks"
@@ -178,17 +180,16 @@ class Graphx(DoitCmdBase):
           doit graph --graph-type json --out-file some.png
         """)
 
-    cmd_options = (opt_subtasks, opt_private, opt_no_children, opt_deps, 
-                   opt_show_status, opt_template, opt_graph_type, 
+    cmd_options = (opt_subtasks, opt_private, opt_no_children, opt_deps,
+                   opt_show_status, opt_template, opt_graph_type,
                    opt_out_file)
 
     STATUS_MAP = {'ignore': 'I', 'up-to-date': 'U', 'run': 'R'}
 
-
     @staticmethod
     def _check_task_names(all_task_names, task_names):
         """repost if task 'task_names' """
-        ## Note: simpler and user-friendlier than cmd_base.check_tasks_exist()
+        # Note: simpler and user-friendlier than cmd_base.check_tasks_exist()
         if not set(task_names).issubset(all_task_names):
             bad_tasks = set(task_names) - all_task_names
             msg = "Task(s) not found: %s" % str(bad_tasks)
@@ -221,7 +222,7 @@ class Graphx(DoitCmdBase):
         :param filter_task_names: If None, graph includes all tasks
         """
         import networkx as nx
-        
+
         def _filter_dependencies_to_collect(dep_attributes, filter_deps):
             filter_deps = re.sub(r'[\s,|]+', ' ', filter_deps).strip()
             if not filter_deps:
@@ -234,27 +235,30 @@ class Graphx(DoitCmdBase):
                     elif 'none'.startswith(f_dep):
                         return {}
                     else:
-                        matched = {dep:dep_kws
-                                for dep, dep_kws 
-                                in six.iteritems(dep_attributes)
-                                if dep.startswith(f_dep)}
+                        matched = {dep: dep_kws
+                                   for dep, dep_kws
+                                   in six.iteritems(dep_attributes)
+                                   if dep.startswith(f_dep)}
                         if not matched:
                             msg = "Unsupported dep-type '%s'; should be one : %s"
-                            raise InvalidCommand(msg % (f_dep, list(dep_attributes)))
+                            raise InvalidCommand(
+                                msg % (f_dep, list(dep_attributes)))
                         dep_attributes_out.update(matched)
                 return dep_attributes_out
-                
+
         dep_attributes = {
-            'task_dep':     {'node_type':'task'},
-            'setup_tasks':  {'node_type':'task', 'edge_type':'setup_dep'},
-            'calc_dep':     {'node_type':'task'},
-            'file_dep':     {'node_type':'file'},
-            'wild_dep':     {'node_type':'wildcard'},
+            'task_dep':     {'node_type': 'task'},
+            'setup_tasks':  {'node_type': 'task', 'edge_type': 'setup_dep'},
+            'calc_dep':     {'node_type': 'task'},
+            'file_dep':     {'node_type': 'file'},
+            'wild_dep':     {'node_type': 'wildcard'},
         }
-        
-        dep_attributes = _filter_dependencies_to_collect(dep_attributes, filter_deps)
-        
+
+        dep_attributes = _filter_dependencies_to_collect(
+            dep_attributes, filter_deps)
+
         graph = nx.DiGraph()
+
         def add_graph_node(node, node_type, add_deps=False):
             if node in graph:
                 return
@@ -271,9 +275,11 @@ class Graphx(DoitCmdBase):
                     for dep, dep_kws in six.iteritems(dep_attributes):
                         for dname in getattr(task, dep):
                             dig_deps = filter_task_names is None or dname in filter_task_names
-                            add_graph_node(dname, dep_kws['node_type'], add_deps=dig_deps)
-                            graph.add_edge(node, dname, type=dep_kws.get('edge_type', dep))
-                    ## Above loop cannot add targets
+                            add_graph_node(
+                                dname, dep_kws['node_type'], add_deps=dig_deps)
+                            graph.add_edge(
+                                node, dname, type=dep_kws.get('edge_type', dep))
+                    # Above loop cannot add targets
                     #    because they are reversed.
                     #
                     # FIX: Targets are not filtered!!
@@ -281,7 +287,7 @@ class Graphx(DoitCmdBase):
                         add_graph_node(dname, 'file')
                         graph.add_edge(dname, node, type='target')
 
-        ## Add all named-tasks
+        # Add all named-tasks
         #    and their dependencies.
         #
         for tname in (filter_task_names or all_tasks_map.keys()):
@@ -297,12 +303,12 @@ class Graphx(DoitCmdBase):
                 break
         else:
             msg = "Unsupported graph-type '%s'; should be one : %s"
-            raise InvalidCommand(msg % (graph_type, list(SUPPORTED_GRAPH_TYPES)))
-            
-        
-    def _execute(self, subtasks, no_children, show_status, private, 
+            raise InvalidCommand(
+                msg % (graph_type, list(SUPPORTED_GRAPH_TYPES)))
+
+    def _execute(self, subtasks, no_children, show_status, private,
                  deps, template, graph_type, out_file, pos_args=None):
-        task_names=pos_args
+        task_names = pos_args
         tasks_map = dict([(t.name, t) for t in self.task_list])
 
         if task_names:
@@ -310,10 +316,9 @@ class Graphx(DoitCmdBase):
             if not private:
                 task_names = [t for t in task_names if not t.startswith('_')]
             if subtasks:
-                task_names = Graphx._include_subtasks(tasks_map, task_names, subtasks)
-            
+                task_names = Graphx._include_subtasks(
+                    tasks_map, task_names, subtasks)
+
         graph = self._prepare_graph(tasks_map, task_names, deps, show_status)
 
         self._display_graph(graph, graph_type, template, show_status, out_file)
-
-
