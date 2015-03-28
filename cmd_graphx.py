@@ -224,22 +224,26 @@ class Graphx(DoitCmdBase):
         
         def _filter_dependencies_to_collect(dep_attributes, filter_deps):
             filter_deps = re.sub(r'[\s,|]+', ' ', filter_deps).strip()
-            if filter_deps:
-                dep_attributes2 = {}
+            if not filter_deps:
+                return dep_attributes
+            else:
+                dep_attributes_out = {}
                 for f_dep in filter_deps.split():
                     if 'all'.startswith(f_dep):
-                        dep_attributes2 = dep_attributes
+                        return dep_attributes
                     elif 'none'.startswith(f_dep):
-                        dep_attributes2 = {}
+                        return {}
                     else:
-                        dep_attributes2.update({dep:dep_kws
+                        matched = {dep:dep_kws
                                 for dep, dep_kws 
                                 in six.iteritems(dep_attributes)
-                                if dep.startswith(f_dep)})
-            print(dep_attributes2)
-            return dep_attributes2
-            
-
+                                if dep.startswith(f_dep)}
+                        if not matched:
+                            msg = "Unsupported dep-type '%s'; should be one : %s"
+                            raise InvalidCommand(msg % (f_dep, list(dep_attributes)))
+                        dep_attributes_out.update(matched)
+                return dep_attributes_out
+                
         dep_attributes = {
             'task_dep':     {'node_type':'task'},
             'setup_tasks':  {'node_type':'task', 'edge_type':'setup_dep'},
@@ -296,9 +300,8 @@ class Graphx(DoitCmdBase):
             raise InvalidCommand(msg % (graph_type, list(SUPPORTED_GRAPH_TYPES)))
             
         
-    def _execute(self, subtasks=False, no_children=True, show_status=False,
-                 private=False, deps=False, template=None,
-                 graph_type='matplotlib', out_file=None, pos_args=None):
+    def _execute(self, subtasks, no_children, show_status, private, 
+                 deps, template, graph_type, out_file, pos_args=None):
         task_names=pos_args
         tasks_map = dict([(t.name, t) for t in self.task_list])
 
