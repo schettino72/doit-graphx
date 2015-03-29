@@ -14,8 +14,8 @@ Install
 It has been tested with python 2.7 and python 3.4, and 
 it requires *doit* version >= 0.28, `networkx` and `matplotlib`.
 
-You can either then download the sources and install it in "development" mode,
- to follow any upstream changes::
+You can either download the sources and install them in "development" mode
+(so that you can follow development-changes)::
 
   $ git clone https://github.com/pydoit/doit-graphx.git
   $ cd doit-graphx
@@ -50,7 +50,7 @@ the root of your project with the following content::
 Now you can just use the `graphx` command::
 
   doit graphx
-  doit graph                        ## By default, plots a matplotlib frame
+  doit graph                        ## open matplotlib frame, WILL CHANGE THIS!
   doit graph --deps file,calc,target --private
   doit graph --out-file some.png
   doit graph --graph-type json --out-file some.png

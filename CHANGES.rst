@@ -21,5 +21,10 @@ from code
 
 Changelog
 =========
-- v0.1-dev2 (29-March-2015) 
-- v0.1-dev1 (28-March-2015) 
+- PLANNED: v0.1-dev2 (XX-Apr-2015): 
+  - print json if graph-type unspecified (don't require matplotlib just to run).
+
+- v0.1-dev2 (29-March-2015): 
+  - properly working deps-filtering, 
+
+- v0.1-dev1 (28-March-2015): added all `write_XXX()` networkx's methods.
