@@ -2,14 +2,15 @@
 
 from __future__ import print_function
 
-from cmd_graphx import _match_prefix, Graphx
-
-import unittest
-import six
-from doit.task import Task
-from six import StringIO
-from tests.conftest import CmdFactory
+from cmd_graphx import Graphx
+import cmd_graphx
 from doit.exceptions import InvalidCommand
+from doit.task import Task
+from tests.conftest import CmdFactory
+import unittest
+
+from six import StringIO
+import six
 
 
 class TestMatchPrefix(unittest.TestCase):
@@ -21,25 +22,25 @@ class TestMatchPrefix(unittest.TestCase):
         prefixes = [None, []]
         for prefix in prefixes:
             self.assertRaises(
-                TypeError, _match_prefix, self.items(), prefix)
+                TypeError, cmd_graphx._match_prefix, self.items(), prefix)
 
     def test_unknown(self):
         prefixes = ['abcd', 'foo', 'abcd', '11', tuple(), ]
         for prefix in prefixes:
-            self.assertIsNone(_match_prefix(self.items(), prefix))
+            self.assertIsNone(cmd_graphx._match_prefix(self.items(), prefix))
 
     def test_good(self):
         prefixes = ['abc', 'ab_', '12', '1_']
         results = ['abc', 'ab_', '123', '1__']
         for prefix, result in zip(prefixes, results):
             self.assertEqual(
-                _match_prefix(self.items(), prefix), result, prefix)
+                cmd_graphx._match_prefix(self.items(), prefix), result, prefix)
 
     def test_ambiguous(self):
         prefixes = ['', 'a', 'ab', '1']
         for prefix in prefixes:
             self.assertRaises(
-                ValueError, _match_prefix, self.items(), prefix)
+                ValueError, cmd_graphx._match_prefix, self.items(), prefix)
 
 
 class TestFilterDepAttributes(unittest.TestCase):
@@ -92,32 +93,73 @@ class TestFilterDepAttributes(unittest.TestCase):
         self.assertEqual(attrs_out, {}, filters)
 
 
+def _sample_tasks():
+    def find_deps():
+        return dict(file_dep=['a.json', 'b.json'])
+
+    return [
+        Task("read", None, file_dep=['fin.txt'], targets=['fout.hdf5']),
+        Task("t3", None, task_dep=['t3:a'], has_subtask=True, ),
+        Task("t3:a", None, is_subtask=True, file_dep=[
+             'fout.hdf5'], targets=['a.json']),
+        Task("t3:b", None, is_subtask=True,
+             file_dep=['fout.hdf5', 'fin.txt'], targets=['b.json']),
+        Task("join_files", None, task_dep=[
+             't3:*', 't3:a', 't3:b', ], calc_dep=['find_deps']),
+        Task("find_deps", [find_deps]),
+    ]
+
+
+def _sample_tasks_map():
+    return dict([(t.name, t) for t in _sample_tasks()])
+
+
+class TestConstructGraph(unittest.TestCase):
+
+    def test_filter_nodes_empty(self):
+        filter_task_names = []
+        tasks_map = _sample_tasks_map()
+        graph = cmd_graphx._construct_graph(tasks_map, filter_task_names,
+                                            dep_manager=None, no_children=False,
+                                            filter_deps=None, show_status=False)
+        self.assertTrue(
+            len(graph.nodes()) > 0, 'Nodes empty: %s' % graph.nodes())
+        self.assertTrue(
+            len(graph.edges()) > 0, 'Edges empty: %s' % graph.edges())
+
+    def test_filter_nodes_none(self):
+        filter_task_names = None
+        tasks_map = _sample_tasks_map()
+        graph = cmd_graphx._construct_graph(tasks_map, filter_task_names,
+                                            dep_manager=None, no_children=False,
+                                            filter_deps=None, show_status=False)
+        self.assertTrue(
+            len(graph.nodes()) > 0, 'Nodes empty: %s' % graph.nodes())
+        self.assertTrue(
+            len(graph.edges()) > 0, 'Edges empty: %s' % graph.edges())
+
+    def test_filter_nodes_one(self):
+        filter_task_names = []
+        tasks_map = _sample_tasks_map()
+        graph = cmd_graphx._construct_graph(tasks_map, filter_task_names,
+                                            dep_manager=None, no_children=False,
+                                            filter_deps=None, show_status=False)
+        self.assertTrue(
+            len(graph.nodes()) > 0, 'Nodes empty: %s' % graph.nodes())
+        self.assertTrue(
+            len(graph.edges()) > 0, 'Edges empty: %s' % graph.edges())
+
+
 class TestCmdGraphx(unittest.TestCase):
-
-    def _tasks(self):
-        def find_deps():
-            return dict(file_dep=['a.json', 'b.json'])
-
-        return [
-            Task("read", None, file_dep=['fin.txt'], targets=['fout.hdf5']),
-            Task("t3", None, task_dep=['t3:a'], has_subtask=True, ),
-            Task("t3:a", None, is_subtask=True, file_dep=[
-                 'fout.hdf5'], targets=['a.json']),
-            Task("t3:b", None, is_subtask=True,
-                 file_dep=['fout.hdf5', 'fin.txt'], targets=['b.json']),
-            Task("join_files", None, task_dep=['t*'], calc_dep=['find_deps']),
-            Task("find_deps", [find_deps]),
-        ]
 
     @unittest.skip(('Blocks on graph-plot.'))
     def test_matplotlib(self):
-        output = StringIO()
-        cmd = CmdFactory(Graphx, outstream=output, task_list=self._tasks())
+        cmd = CmdFactory(Graphx, task_list=_sample_tasks())
         cmd._execute()
 
     def test_store_json_stdout(self):
         output = StringIO()
-        cmd = CmdFactory(Graphx, outstream=output, task_list=self._tasks())
+        cmd = CmdFactory(Graphx, outstream=output, task_list=_sample_tasks())
         cmd._execute(graph_type='json')
         got = output.getvalue()
         self.assertIn("read", got)
@@ -126,19 +168,20 @@ class TestCmdGraphx(unittest.TestCase):
 
     def test_target_in(self):
         output = StringIO()
-        cmd = CmdFactory(Graphx, outstream=output, task_list=self._tasks())
+        cmd = CmdFactory(Graphx, outstream=output, task_list=_sample_tasks())
         cmd._execute(graph_type='json')
         got = output.getvalue()
         self.assertIn("fout.hdf5", got)
 
     def test_target_out(self):
         output = StringIO()
-        cmd = CmdFactory(Graphx, outstream=output, task_list=self._tasks())
+        cmd = CmdFactory(Graphx, outstream=output, task_list=_sample_tasks())
         cmd._execute(graph_type='json', deps='task')
         got = output.getvalue()
         self.assertNotIn("fout.hdf5", got)
 
     def test_children(self):
+        # TODO: Implement no-child option.
         my_task = Task("t2", [""], file_dep=['d2.txt'])
         output = StringIO()
         cmd = CmdFactory(Graphx, outstream=output, task_list=[my_task])

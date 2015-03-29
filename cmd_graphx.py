@@ -16,7 +16,6 @@ from textwrap import dedent
 import six
 
 import networkx as nx
-from IPython.nbconvert.utils.pandoc import __version
 
 
 def _match_prefix(items, prefix):
@@ -120,6 +119,76 @@ def _add_all_supported_output_formats():
 # FIXME: Discover import-time for help-strings
 #     (Cmd.doc_description should be a function
 SUPPORTED_GRAPH_TYPES = _add_all_supported_output_formats()
+
+
+def _select_graph_func(graph, graph_type):
+    graph_names = sorted(SUPPORTED_GRAPH_TYPES)
+    try:
+        matched_graph_type = _match_prefix(graph_names, graph_type.lower())
+    except ValueError as ex:
+        raise InvalidCommand("graph-type %s" % ex.args[0])
+    else:
+        if not matched_graph_type:
+            msg = "Unsupported graph-type '%s'; should be one: %s"
+            raise InvalidCommand(msg % (graph_type, graph_names))
+        else:
+            func = SUPPORTED_GRAPH_TYPES[matched_graph_type]
+
+            return matched_graph_type, func
+
+
+def _construct_graph(all_tasks_map, filter_task_names, dep_manager,
+                     no_children, filter_deps, show_status):
+    """
+    Construct a *networkx* graph of nodes (Tasks/Files/Wildcards) and 
+    their dependencies (file/wildcard, task/setup,calc).
+
+    :param seq filter_task_names: If None, graph includes all tasks
+    :param str filter_deps: a list of prefixes separated with [,| ],
+                            If None, includes all deps
+    """
+
+    dep_attributes = {
+        'task_dep':     {'node_type': 'task'},
+        'setup_tasks':  {'node_type': 'task'},
+        'calc_dep':     {'node_type': 'task'},
+        'file_dep':     {'node_type': 'file'},
+        'wild_dep':     {'node_type': 'wildcard'},
+        'targets':      {'node_type': 'file'},
+    }
+
+    dep_attributes = Graphx._filter_dep_attributes_to_collect(
+        dep_attributes, filter_deps)
+
+    graph = nx.DiGraph()
+
+    def add_graph_node(node, node_type):
+        if node in graph:
+            return
+        if node_type != 'task':
+            graph.add_node(node, type=node_type)
+        else:
+            task = all_tasks_map[node]
+            status = ''
+            if show_status:
+                status = Graphx._get_task_status(dep_manager, task)
+            graph.add_node(node, type=node_type,
+                           is_subtask=task.is_subtask, status=status)
+            if not filter_task_names or node in filter_task_names:
+                for dep, dep_kws in six.iteritems(dep_attributes):
+                    for dname in getattr(task, dep):
+                        add_graph_node(
+                            dname, dep_kws['node_type'])
+                        if dep == 'targets':
+                            edge = (dname, node)
+                        else:
+                            edge = (node, dname)
+                        graph.add_edge(*edge, type=dep)
+
+    for tname in (filter_task_names or all_tasks_map.keys()):
+        add_graph_node(tname, 'task')
+
+    return graph
 
 
 opt_subtasks = {
@@ -259,7 +328,7 @@ class Graphx(DoitCmdBase):
                 cmd_base.subtasks_iter(tasks, tasks[name]))
         return subtasks
 
-    @staticmethod
+    @staticmethod  # TODO: Get task-status after graph-construction
     def _get_task_status(dep_manager, task):
         """print a single task"""
         # FIXME group task status is never up-to-date
@@ -272,6 +341,8 @@ class Graphx(DoitCmdBase):
 
     @staticmethod
     def _filter_dep_attributes_to_collect(dep_attributes, filter_deps):
+        if not filter_deps:
+            return dep_attributes
         filter_deps = re.sub(r'[\s,|]+', ' ', filter_deps).strip()
         if not filter_deps:
             return dep_attributes
@@ -296,74 +367,6 @@ class Graphx(DoitCmdBase):
                     dep_attributes_out[full_dep] = dep_attributes[full_dep]
 
             return dep_attributes_out
-
-    def _construct_graph(self, all_tasks_map, filter_task_names, no_children,
-                         filter_deps, show_status):
-        """
-        Construct a *networkx* graph of nodes (Tasks/Files/Wildcards) and 
-        their dependencies (file/wildcard, task/setup,calc).
-
-        :param seq filter_task_names: If None, graph includes all _tasks
-        :param str filter_deps: a list of prefixes separated with [,| ],
-                                If None, includes all deps
-        """
-
-        dep_attributes = {
-            'task_dep':     {'node_type': 'task'},
-            'setup_tasks':  {'node_type': 'task'},
-            'calc_dep':     {'node_type': 'task'},
-            'file_dep':     {'node_type': 'file'},
-            'wild_dep':     {'node_type': 'wildcard'},
-            'targets':      {'node_type': 'file'},
-        }
-
-        dep_attributes = Graphx._filter_dep_attributes_to_collect(
-            dep_attributes, filter_deps)
-
-        graph = nx.DiGraph()
-
-        def add_graph_node(node, node_type):
-            if node in graph:
-                return
-            if node_type != 'task':
-                graph.add_node(node, type=node_type)
-            else:
-                task = all_tasks_map[node]
-                status = ''
-                if show_status:
-                    status = Graphx._get_task_status(self.dep_manager, task)
-                graph.add_node(node, type=node_type,
-                               is_subtask=task.is_subtask, status=status)
-                if filter_task_names is None or node in filter_task_names:
-                    for dep, dep_kws in six.iteritems(dep_attributes):
-                        for dname in getattr(task, dep):
-                            add_graph_node(
-                                dname, dep_kws['node_type'])
-                            if dep == 'targets':
-                                edge = (dname, node)
-                            else:
-                                edge = (node, dname)
-                            graph.add_edge(*edge, type=dep)
-
-        for tname in (filter_task_names or all_tasks_map.keys()):
-            add_graph_node(tname, 'task')
-
-        return graph
-
-    def _select_graph_func(self, graph, graph_type):
-        graph_names = sorted(SUPPORTED_GRAPH_TYPES)
-        try:
-            matched_graph_type = _match_prefix(graph_names, graph_type.lower())
-        except ValueError as ex:
-            raise InvalidCommand("graph-type %s" % ex.args[0])
-        else:
-            if not matched_graph_type:
-                msg = "Unsupported graph-type '%s'; should be one: %s"
-                raise InvalidCommand(msg % (graph_type, graph_names))
-            else:
-                func = SUPPORTED_GRAPH_TYPES[matched_graph_type]
-
-                return matched_graph_type, func
 
     def _prepare_out_file(self, fname, ext):
         """Appends extension(dot included) if `fname` has'nt got one, or `stdout` if was '-'."""
@@ -396,9 +399,9 @@ class Graphx(DoitCmdBase):
                 task_names = Graphx._include_subtasks(
                     tasks_map, task_names, subtasks)
 
-        graph = self._construct_graph(
-            tasks_map, task_names, no_children, deps, show_status)
-        graph_type, func = self._select_graph_func(graph, graph_type)
+        graph = _construct_graph(tasks_map, task_names, self.dep_manager,
+                                 no_children, deps, show_status)
+        graph_type, func = _select_graph_func(graph, graph_type)
         out_file = self._prepare_out_file(out_file, graph_type)
         disp_params = dict(zip(['graph_type', 'show_status', 'deps', 'template'],
                                [graph_type, show_status, deps, template]))
