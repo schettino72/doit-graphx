@@ -126,7 +126,7 @@ opt_subtasks = {
     'long': 'subtasks',
     'type': bool,
     'default': False,
-    'help': "include also sub-tasks"
+    'help': "include also sub-_tasks"
             "(applies when task-list given)"
 }
 
@@ -136,7 +136,7 @@ opt_private = {
     'long': 'private',
     'type': bool,
     'default': False,
-    'help': "include also private tasks starting with '_'"
+    'help': "include also private _tasks starting with '_'"
             " (applies when task-list given)"
 }
 
@@ -146,7 +146,7 @@ opt_no_children = {
     'long': 'no-children',
     'type': bool,
     'default': False,
-    'help': "TODO: include only selected tasks"
+    'help': "TODO: include only selected _tasks"
             " (applies when task-list given)"
 }
 
@@ -156,7 +156,7 @@ opt_deps = {
     'long': 'deps',
     'type': str,
     'default': '',
-    'help': "type of dependencies to include from selected tasks"
+    'help': "type of dependencies to include from selected _tasks"
             " (list of: ALL|file|wild|task|calc|setup|none|target)"
 }
 
@@ -216,7 +216,7 @@ class Graphx(DoitCmdBase):
 
     """command doit graph"""
 
-    doc_purpose = "display a dependency-graph for all (or selected ) tasks"
+    doc_purpose = "display a dependency-graph for all (or selected ) _tasks"
     doc_usage = "[TASK ...]"
     doc_description = dedent("""\
         Without any options, includes all known taks.
@@ -245,12 +245,12 @@ class Graphx(DoitCmdBase):
             raise InvalidCommand(msg)
 
     @staticmethod
-    def _include_subtasks(tasks, task_names, include_subtasks):
+    def _include_subtasks(_tasks, task_names, include_subtasks):
         """append any subtasks of 'task_names' """
         # get task by name
         subtasks = []
         for name in task_names:
-            subtasks.extend(cmd_base.subtasks_iter(tasks, tasks[name]))
+            subtasks.extend(cmd_base.subtasks_iter(_tasks, _tasks[name]))
         return subtasks
 
     @staticmethod
@@ -270,23 +270,26 @@ class Graphx(DoitCmdBase):
         if not filter_deps:
             return dep_attributes
         else:
+            dep_names = list(dep_attributes)
+            dep_names.extend(['all', 'none'])
             dep_attributes_out = {}
-            dep_names = sorted(dep_attributes)
-            for f_dep in filter_deps.split():
+            for f_dep in filter_deps.lower().split():
                 try:
-                    f_dep = _match_prefix(dep_names, f_dep)
+                    full_dep = _match_prefix(dep_names, f_dep)
                 except ValueError as ex:
                     raise InvalidCommand("graph-type %s" % ex.args[0])
                 else:
-                    if not f_dep:
+                    if not full_dep:
                         msg = "Unsupported dependency-type '%s'; should be one: %s"
-                        raise InvalidCommand(msg % (f_dep, dep_names))
-                    if 'all' == f_dep:
+                        raise InvalidCommand(
+                            msg % (full_dep, sorted(dep_names)))
+                    if 'all' == full_dep:
                         return dep_attributes
-                    elif 'none' == f_dep:
+                    elif 'none' == full_dep:
                         return {}
-                    dep_attributes_out[f_dep] = dep_attributes[f_dep]
-                return dep_attributes_out
+                    dep_attributes_out[full_dep] = dep_attributes[full_dep]
+
+            return dep_attributes_out
 
     def _construct_graph(self, all_tasks_map, filter_task_names, no_children,
                          filter_deps, show_status):
@@ -294,7 +297,7 @@ class Graphx(DoitCmdBase):
         Construct a *networkx* graph of nodes (Tasks/Files/Wildcards) and 
         their dependencies (file/wildcard, task/setup,calc).
 
-        :param seq filter_task_names: If None, graph includes all tasks
+        :param seq filter_task_names: If None, graph includes all _tasks
         :param str filter_deps: a list of prefixes separated with [,| ],
                                 If None, includes all deps
         """
@@ -344,7 +347,7 @@ class Graphx(DoitCmdBase):
     def _select_graph_func(self, graph, graph_type):
         graph_names = sorted(SUPPORTED_GRAPH_TYPES)
         try:
-            matched_graph_type = _match_prefix(graph_names, graph_type)
+            matched_graph_type = _match_prefix(graph_names, graph_type.lower())
         except ValueError as ex:
             raise InvalidCommand("graph-type %s" % ex.args[0])
         else:

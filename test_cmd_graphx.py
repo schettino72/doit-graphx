@@ -9,6 +9,7 @@ import six
 from doit.task import Task
 from six import StringIO
 from tests.conftest import CmdFactory
+from doit.exceptions import InvalidCommand
 
 
 class TestMatchPrefix(unittest.TestCase):
@@ -41,9 +42,59 @@ class TestMatchPrefix(unittest.TestCase):
                 ValueError, _match_prefix, self.items(), prefix)
 
 
+class TestFilterDepAttributes(unittest.TestCase):
+
+    def _deps_attributes(self):
+        return {'task_dep': 1, 'setup_tasks': 2, 'calc_dep': 3,
+                'file_dep': 4, 'wild_dep': 5, 'targets': 6, }
+
+    def test_empty(self):
+        attrs_in = self._deps_attributes()
+        filters = ''
+        attrs_out = Graphx._filter_dep_attributes_to_collect(attrs_in, filters)
+        self.assertEqual(attrs_out, attrs_in, filters)
+
+    def test_prefixes_n_separators(self):
+        attrs_in = self._deps_attributes()
+        filters = '  se | FIL,  tAs | c wil tar |'
+        attrs_out = Graphx._filter_dep_attributes_to_collect(attrs_in, filters)
+        self.assertEqual(attrs_out, attrs_in, filters)
+
+    def test_ambiguous(self):
+        attrs_in = self._deps_attributes()
+        filters = '  tA '
+        self.assertRaises(
+            InvalidCommand,
+            Graphx._filter_dep_attributes_to_collect, attrs_in, filters)
+
+    def test_all(self):
+        attrs_in = self._deps_attributes()
+        filters = 'all'
+        attrs_out = Graphx._filter_dep_attributes_to_collect(attrs_in, filters)
+        self.assertEqual(attrs_out, attrs_in, filters)
+
+    def test_all_and_others(self):
+        attrs_in = self._deps_attributes()
+        filters = 'calc all,task'
+        attrs_out = Graphx._filter_dep_attributes_to_collect(attrs_in, filters)
+        self.assertEqual(attrs_out, attrs_in, filters)
+
+    def test_none(self):
+        attrs_in = self._deps_attributes()
+        filters = ' file,  none | task '
+        attrs_out = Graphx._filter_dep_attributes_to_collect(attrs_in, filters)
+        self.assertEqual(attrs_out, {}, filters)
+
+    def test_none_and_others(self):
+        attrs_in = self._deps_attributes()
+        filters = ' fil,  non | task '
+        attrs_out = Graphx._filter_dep_attributes_to_collect(attrs_in, filters)
+        self.assertEqual(attrs_out, {}, filters)
+
+
 class TestCmdGraphx(unittest.TestCase):
 
-    def tasks(self):
+    def _tasks(self):
         return [
             Task("read", None, file_dep=['fin.txt'], targets=['fout.hdf5']),
             Task("t3", None, task_dep=['t3:a'], has_subtask=True, ),
@@ -53,7 +104,7 @@ class TestCmdGraphx(unittest.TestCase):
 
     def test_store_json_stdout(self):
         output = StringIO()
-        cmd = CmdFactory(Graphx, outstream=output, task_list=self.tasks())
+        cmd = CmdFactory(Graphx, outstream=output, task_list=self._tasks())
         cmd._execute(graph_type='json')
         got = output.getvalue()
         self.assertIn("read", got)
@@ -62,13 +113,13 @@ class TestCmdGraphx(unittest.TestCase):
 
     def test_target(self):
         output = StringIO()
-        cmd = CmdFactory(Graphx, outstream=output, task_list=self.tasks())
+        cmd = CmdFactory(Graphx, outstream=output, task_list=self._tasks())
         cmd._execute(graph_type='json')
         got = output.getvalue()
         self.assertIn("fout.hdf5", got)
 
         output = StringIO()
-        cmd = CmdFactory(Graphx, outstream=output, task_list=self.tasks())
+        cmd = CmdFactory(Graphx, outstream=output, task_list=self._tasks())
         cmd._execute(graph_type='json', deps='file')
         got = output.getvalue()
         self.assertNotIn("fout.hdf5", got)
