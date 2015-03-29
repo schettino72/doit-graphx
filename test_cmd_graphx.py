@@ -124,16 +124,17 @@ class TestCmdGraphx(unittest.TestCase):
         self.assertIn("t3", got)
         self.assertIn("join_files", got)
 
-    def test_target(self):
+    def test_target_in(self):
         output = StringIO()
         cmd = CmdFactory(Graphx, outstream=output, task_list=self._tasks())
         cmd._execute(graph_type='json')
         got = output.getvalue()
         self.assertIn("fout.hdf5", got)
 
+    def test_target_out(self):
         output = StringIO()
         cmd = CmdFactory(Graphx, outstream=output, task_list=self._tasks())
-        cmd._execute(graph_type='json', deps='file')
+        cmd._execute(graph_type='json', deps='task')
         got = output.getvalue()
         self.assertNotIn("fout.hdf5", got)
 

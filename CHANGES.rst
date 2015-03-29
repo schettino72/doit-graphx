@@ -6,12 +6,12 @@ Changes
 
 Known deficiencies
 ==================
-- cannot filter-include target-deps.
 
 TODOs
 =====
-- move matpotlib draw-data in external files.
-- Pass kw-options from cmd-line to `store_XXX()` methods.
+- Pass kw-options from cmd-line to `nx.store_XXX()` methods.
+- Add graphviz graphs.
+- Add more tests, setup Travis, add Docs contents.
 
 Changelog
 =========

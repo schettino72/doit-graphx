@@ -96,7 +96,7 @@ def _draw_matplotlib_graph(graph, fname, disp_params, **kws):
 
 def _store_json(graph, fname, disp_params, **kws):
     import json
-    # TODO: obey disp_params
+    # TODO: Obey disp_params on json
     m = nx.to_dict_of_dicts(graph)
     json.dump(m, fname, **kws)
 
@@ -220,13 +220,15 @@ class Graphx(DoitCmdBase):
     doc_usage = "[TASK ...]"
     doc_description = dedent("""\
         Without any options, includes all known taks.
-        TODO: Task-selection works also with wildcards.
+        TODO: Task-selection works with wildcards.
         
         Examples:
-          doit graph
+          doit graph        ## By default, plots a matplotlib frame
           doit graph --deps file,calc,target --private
           doit graph --out-file some.png
           doit graph --graph-type json --out-file some.png
+          
+        See https://github.com/pydoit/doit-graphx
         """)
 
     cmd_options = (opt_subtasks, opt_private, opt_no_children, opt_deps,
@@ -396,5 +398,5 @@ class Graphx(DoitCmdBase):
         out_file = self._prepare_out_file(out_file, graph_type)
         disp_params = dict(zip(['graph_type', 'show_status', 'deps', 'template'],
                                [graph_type, show_status, deps, template]))
-        kws = {}  # TODO: kws not used yet.
+        kws = {}  # TODO: kws not used on write_XXX() methods.
         func(graph, out_file, disp_params, **kws)
