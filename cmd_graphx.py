@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 from _functools import partial
-from _version import (__version__, __updated__)
+from _version import (__version__, __updated__)  # @UnusedImport
 from doit import cmd_base
 from doit.cmd_base import DoitCmdBase
 from doit.exceptions import InvalidCommand
@@ -137,8 +137,7 @@ def _select_graph_func(graph, graph_type):
             return matched_graph_type, func
 
 
-def _construct_graph(all_tasks_map, filter_task_names, dep_manager,
-                     no_children, filter_deps, show_status):
+def _construct_graph(all_tasks_map, filter_task_names, no_children, filter_deps):
     """
     Construct a *networkx* graph of nodes (Tasks/Files/Wildcards) and 
     their dependencies (file/wildcard, task/setup,calc).
@@ -168,12 +167,8 @@ def _construct_graph(all_tasks_map, filter_task_names, dep_manager,
         if node_type != 'task':
             graph.add_node(node, type=node_type)
         else:
+            graph.add_node(node, type=node_type)
             task = all_tasks_map[node]
-            status = ''
-            if show_status:
-                status = Graphx._get_task_status(dep_manager, task)
-            graph.add_node(node, type=node_type,
-                           is_subtask=task.is_subtask, status=status)
             if not filter_task_names or node in filter_task_names:
                 for dep, dep_kws in six.iteritems(dep_attributes):
                     for dname in getattr(task, dep):
@@ -328,17 +323,6 @@ class Graphx(DoitCmdBase):
                 cmd_base.subtasks_iter(tasks, tasks[name]))
         return subtasks
 
-    @staticmethod  # TODO: Get task-status after graph-construction
-    def _get_task_status(dep_manager, task):
-        """print a single task"""
-        # FIXME group task status is never up-to-date
-        if dep_manager.status_is_ignore(task):
-            task_status = 'ignore'
-        else:
-            # FIXME:'ignore' handling is ugly
-            task_status = dep_manager.get_status(task, None)
-        return Graphx.STATUS_MAP[task_status]
-
     @staticmethod
     def _filter_dep_attributes_to_collect(dep_attributes, filter_deps):
         if not filter_deps:
@@ -368,6 +352,22 @@ class Graphx(DoitCmdBase):
 
             return dep_attributes_out
 
+    def _update_task_nodes(self, tasks_map, graph, show_status):
+        def task_status(task):
+            # FIXME group task status is never up-to-date
+            if self.dep_manager.status_is_ignore(task):
+                task_status = 'ignore'
+            else:
+                # FIXME:'ignore' handling is ugly
+                task_status = self.dep_manager.get_status(task, None)
+            return Graphx.STATUS_MAP[task_status]
+        for node, d in graph.nodes(data=True):
+            if d['type'] == 'task':
+                task = tasks_map[node]
+                status = task_status(task) if show_status else ''
+                d['status'] = status
+                d['is_subtask'] = task.is_subtask
+
     def _prepare_out_file(self, fname, ext):
         """Appends extension(dot included) if `fname` has'nt got one, or `stdout` if was '-'."""
         if '-' == fname:
@@ -391,6 +391,8 @@ class Graphx(DoitCmdBase):
         task_names = pos_args
         tasks_map = dict([(t.name, t) for t in self.task_list])
 
+        # TODO: Imporve task-selection procedure.
+        #
         if task_names:
             Graphx._check_task_names(tasks_map.keys(), task_names)
             if not private:
@@ -399,8 +401,8 @@ class Graphx(DoitCmdBase):
                 task_names = Graphx._include_subtasks(
                     tasks_map, task_names, subtasks)
 
-        graph = _construct_graph(tasks_map, task_names, self.dep_manager,
-                                 no_children, deps, show_status)
+        graph = _construct_graph(tasks_map, task_names, no_children, deps)
+        self._update_task_nodes(tasks_map, graph, show_status)
         graph_type, func = _select_graph_func(graph, graph_type)
         out_file = self._prepare_out_file(out_file, graph_type)
         disp_params = dict(zip(['graph_type', 'show_status', 'deps', 'template'],

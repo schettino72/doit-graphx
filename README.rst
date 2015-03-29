@@ -11,8 +11,8 @@ A `doit <http://pydoit.org>`_ command plugin that generates graphical or textual
 
 Install
 -------
-It requires python > 2.7 or python 3,  *doit* version >= 0.28, 
-`networkx` and `matplotlib`.
+It has been tested with python 2.7 and python 3.4, and 
+it requires *doit* version >= 0.28, `networkx` and `matplotlib`.
 
 You can either then download the sources and install it in "development" mode,
  to follow any upstream changes::

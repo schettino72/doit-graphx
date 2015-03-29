@@ -8,10 +8,11 @@ TODOs
 =====
 - Change default action from matplotlib to json-text.
 - Pass kw-options from cmd-line to `nx.store_XXX()` methods.
-- Make matplotlib as a setup-tools "extra" featur.
+- Make matplotlib as a setup-tools "extra" feature.
 - Add graphviz graphs (also as "extra").
 - Add more tests, setup Travis, add Docs contents.
-- The networkx ``write_XXX()`` methods are untested.
+- The networkx's ``write_XXX()`` methods are untested.
+- Task-selection is wrong (ie private works only when task-names given).
 
 from code
 ------------

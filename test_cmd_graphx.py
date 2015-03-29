@@ -120,8 +120,7 @@ class TestConstructGraph(unittest.TestCase):
         filter_task_names = []
         tasks_map = _sample_tasks_map()
         graph = cmd_graphx._construct_graph(tasks_map, filter_task_names,
-                                            dep_manager=None, no_children=False,
-                                            filter_deps=None, show_status=False)
+                                            no_children=False, filter_deps=None)
         self.assertTrue(
             len(graph.nodes()) > 0, 'Nodes empty: %s' % graph.nodes())
         self.assertTrue(
@@ -131,8 +130,7 @@ class TestConstructGraph(unittest.TestCase):
         filter_task_names = None
         tasks_map = _sample_tasks_map()
         graph = cmd_graphx._construct_graph(tasks_map, filter_task_names,
-                                            dep_manager=None, no_children=False,
-                                            filter_deps=None, show_status=False)
+                                            no_children=False, filter_deps=None)
         self.assertTrue(
             len(graph.nodes()) > 0, 'Nodes empty: %s' % graph.nodes())
         self.assertTrue(
@@ -142,12 +140,23 @@ class TestConstructGraph(unittest.TestCase):
         filter_task_names = []
         tasks_map = _sample_tasks_map()
         graph = cmd_graphx._construct_graph(tasks_map, filter_task_names,
-                                            dep_manager=None, no_children=False,
-                                            filter_deps=None, show_status=False)
+                                            no_children=False, filter_deps=None)
         self.assertTrue(
             len(graph.nodes()) > 0, 'Nodes empty: %s' % graph.nodes())
         self.assertTrue(
             len(graph.edges()) > 0, 'Edges empty: %s' % graph.edges())
+
+    def test_node_attributes(self):
+        filter_task_names = []
+        tasks_map = _sample_tasks_map()
+        graph = cmd_graphx._construct_graph(tasks_map, filter_task_names,
+                                            no_children=False, filter_deps=None)
+        for node, d in graph.nodes(data=True):
+            self.assertIn('type', d, (node, d))
+            # This test does not belong here!
+            # if d['type'] == 'task':
+            #     self.assertIn('status', d, (node, d))
+            #     self.assertIn('is_subtask', d, (node, d))
 
 
 class TestCmdGraphx(unittest.TestCase):
@@ -189,6 +198,7 @@ class TestCmdGraphx(unittest.TestCase):
         got = output.getvalue()
         self.assertIn("d2.txt", got)
 
+    @unittest.skip('NOT IMPL YET')
     def test_no_children(self):
         my_task = Task("t2", [""], file_dep=['d2.txt'])
         output = StringIO()
