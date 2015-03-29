@@ -95,12 +95,25 @@ class TestFilterDepAttributes(unittest.TestCase):
 class TestCmdGraphx(unittest.TestCase):
 
     def _tasks(self):
+        def find_deps():
+            return dict(file_dep=['a.json', 'b.json'])
+
         return [
             Task("read", None, file_dep=['fin.txt'], targets=['fout.hdf5']),
             Task("t3", None, task_dep=['t3:a'], has_subtask=True, ),
-            Task("t3:a", None, is_subtask=True),
-            Task("t4", None, task_dep=['r*']),
+            Task("t3:a", None, is_subtask=True, file_dep=[
+                 'fout.hdf5'], targets=['a.json']),
+            Task("t3:b", None, is_subtask=True,
+                 file_dep=['fout.hdf5', 'fin.txt'], targets=['b.json']),
+            Task("join_files", None, task_dep=['t*'], calc_dep=['find_deps']),
+            Task("find_deps", [find_deps]),
         ]
+
+    @unittest.skip(('Blocks on graph-plot.'))
+    def test_matplotlib(self):
+        output = StringIO()
+        cmd = CmdFactory(Graphx, outstream=output, task_list=self._tasks())
+        cmd._execute()
 
     def test_store_json_stdout(self):
         output = StringIO()
@@ -109,7 +122,7 @@ class TestCmdGraphx(unittest.TestCase):
         got = output.getvalue()
         self.assertIn("read", got)
         self.assertIn("t3", got)
-        self.assertIn("t4", got)
+        self.assertIn("join_files", got)
 
     def test_target(self):
         output = StringIO()

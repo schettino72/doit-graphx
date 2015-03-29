@@ -48,17 +48,17 @@ def _draw_matplotlib_graph(graph, fname, disp_params, **kws):
 
     node_type_styles = {
         'task':     {'node_color': 'g', 'node_shape': 's'},
+        'wildcard': {'node_color': 'g', 'node_shape': 'p'},
         'file':     {'node_color': 'b', 'node_shape': 'o'},
-        'wildcard': {'node_color': 'c', 'node_shape': '8'},
     }
     dep_type_styles = {
         # TASK-dependencies
-        'task_dep': {'edge_color': 'k', 'style': 'dotted'},
+        'task_dep': {'edge_color': 'k'},
         'setup_tasks': {'edge_color': 'm', },
         'calc_dep': {'edge_color': 'g', },
+        'wild_dep': {'edge_color': 'k', 'style': 'dashed'},
         # DATA-dependencies
         'file_dep': {'edge_color': 'b', },
-        'wild_dep': {'edge_color': 'b', 'style': 'dashed'},
         'targets':   {'edge_color': 'c', },
     }
 

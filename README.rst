@@ -2,11 +2,13 @@
 doit-graphx
 ===========
 
-.. contents::
-
 Command plugin to generate graphical or textual graphs of [doit](http://pydoit.org)
 task-dependencies using [NetworkX](http://networkx.github.io).
 
+.. figure:: docs/doit_graph.png
+    :align: center
+
+.. contents::
 
 Install
 -------
