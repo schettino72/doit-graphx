@@ -266,17 +266,6 @@ opt_out_file = {
 }
 
 
-def my_safe_repr(obj, context, maxlevels, level):
-    """pretty print supressing unicode prefix
-
-    http://stackoverflow.com/questions/16888409/
-           suppress-unicode-prefix-on-strings-when-using-pprint
-    """
-    typ = type(obj)
-    if six.PY2 and typ is six.text_type:
-        obj = str(obj)
-    return pprint._safe_repr(obj, context, maxlevels, level)
-
 
 class Graphx(DoitCmdBase):
 
@@ -294,6 +283,9 @@ class Graphx(DoitCmdBase):
           doit graph --out-file some.png
           doit graph --graph-type json --out-file some.png
         
+        For networkx's `write_XXX()` methods see:
+        http://networkx.github.io/documentation/latest/reference/readwrite.html
+
         version: {}
         See https://github.com/pydoit/doit-graphx
         """.format(__version__))

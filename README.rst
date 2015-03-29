@@ -55,7 +55,10 @@ Now you can just use the `graphx` command::
   doit graph --out-file some.png
   doit graph --graph-type json --out-file some.png
 
-Multiple output-formats are supported by the `--graph-type <format>` option.
-Type ``doit help graphx`` to see them.
+Multiple output-formats are supported, selected with the 
+``--graph-type <format>`` option.  Type ``doit help graphx`` to see them.  
+Most of them are automatically discovered from networkx's `write_XXX()` methods; 
+see: http://networkx.github.io/documentation/latest/reference/readwrite.html
+
 By default, results are written to standard output.
 
