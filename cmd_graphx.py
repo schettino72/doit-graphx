@@ -2,19 +2,21 @@
 
 from __future__ import print_function
 
-import os
+from _functools import partial
+from _version import (__version__, __updated__)
 from doit import cmd_base
 from doit.cmd_base import DoitCmdBase
 from doit.exceptions import InvalidCommand
+import os
 import pprint
 import re
+import sys
 from textwrap import dedent
 
 import six
 
 import networkx as nx
-import sys
-from _functools import partial
+from IPython.nbconvert.utils.pandoc import __version
 
 
 def _match_prefix(items, prefix):
@@ -126,7 +128,7 @@ opt_subtasks = {
     'long': 'subtasks',
     'type': bool,
     'default': False,
-    'help': "include also sub-_tasks"
+    'help': "include also sub-tasks"
             "(applies when task-list given)"
 }
 
@@ -136,7 +138,7 @@ opt_private = {
     'long': 'private',
     'type': bool,
     'default': False,
-    'help': "include also private _tasks starting with '_'"
+    'help': "include also private tasks starting with '_'"
             " (applies when task-list given)"
 }
 
@@ -146,7 +148,7 @@ opt_no_children = {
     'long': 'no-children',
     'type': bool,
     'default': False,
-    'help': "TODO: include only selected _tasks"
+    'help': "TODO: include only selected tasks"
             " (applies when task-list given)"
 }
 
@@ -156,7 +158,7 @@ opt_deps = {
     'long': 'deps',
     'type': str,
     'default': '',
-    'help': "type of dependencies to include from selected _tasks"
+    'help': "type of dependencies to include from selected tasks"
             " (list of: ALL|file|wild|task|calc|setup|none|target)"
 }
 
@@ -216,7 +218,7 @@ class Graphx(DoitCmdBase):
 
     """command doit graph"""
 
-    doc_purpose = "display a dependency-graph for all (or selected ) _tasks"
+    doc_purpose = "display a dependency-graph for all (or selected ) tasks"
     doc_usage = "[TASK ...]"
     doc_description = dedent("""\
         Without any options, includes all known taks.
@@ -227,9 +229,10 @@ class Graphx(DoitCmdBase):
           doit graph --deps file,calc,target --private
           doit graph --out-file some.png
           doit graph --graph-type json --out-file some.png
-          
+        
+        version: {}
         See https://github.com/pydoit/doit-graphx
-        """)
+        """.format(__version__))
 
     cmd_options = (opt_subtasks, opt_private, opt_no_children, opt_deps,
                    opt_show_status, opt_template, opt_graph_type,
@@ -247,12 +250,13 @@ class Graphx(DoitCmdBase):
             raise InvalidCommand(msg)
 
     @staticmethod
-    def _include_subtasks(_tasks, task_names, include_subtasks):
+    def _include_subtasks(tasks, task_names, include_subtasks):
         """append any subtasks of 'task_names' """
         # get task by name
         subtasks = []
         for name in task_names:
-            subtasks.extend(cmd_base.subtasks_iter(_tasks, _tasks[name]))
+            subtasks.extend(
+                cmd_base.subtasks_iter(tasks, tasks[name]))
         return subtasks
 
     @staticmethod

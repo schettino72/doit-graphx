@@ -1,10 +1,24 @@
 #! /usr/bin/env python
+import io
+import os
+import sys
 
 from setuptools import setup
 
+mydir = os.path.dirname(__file__)
+
+
+def read_project_version():
+    # Version-trick to have version-info in a single place.
+    # http://stackoverflow.com/questions/2058802/how-can-i-get-the-version-defined-in-setup-py-setuptools-in-my-package
+    fglobals = {}
+    with io.open(os.path.join(mydir, '_version.py')) as fd:
+        exec(fd.read(), fglobals)  # To read __version__
+    return fglobals['__version__']
+
 setup(name='doit-graphx',
       description='doit command plugin to generate graphs of tasks using networkx',
-      version='0.1.dev1',
+      version=read_project_version(),
       license='MIT',
       author='XXX',
       author_email='XXX',

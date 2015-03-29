@@ -11,18 +11,30 @@ A `doit <http://pydoit.org>`_ command plugin that generates graphical or textual
 
 Install
 -------
-Requires *doit* version >= 0.28, `networkx` and `matplotlib`.
-You can install it from directly from github::
+It requires python > 2.7 or python 3,  *doit* version >= 0.28, 
+`networkx` and `matplotlib`.
+
+You can either then download the sources and install it in "development" mode,
+ to follow any upstream changes::
+
+  $ git clone https://github.com/pydoit/doit-graphx.git
+  $ cd doit-graphx
+  $ pip install -r requirements.txt
+  $ python setup.py develop
+  
+
+or you can install a snapshot directly from the latest source at github::
 
   pip install git+https://github.com/pydoit/doit-graphx.git
 
 
-Since currently (March-2015) *doit-0.28* is not yet released, 
-you have to install the latest version also from github::
+.. NOTE::
+  Currently (as of March-2015) *doit-0.28* is not yet released, 
+  so you have to install the latest version also from github::
 
-  pip install git+https://github.com/pydoit/doit.git
+    pip install git+https://github.com/pydoit/doit.git
 
-Use the `-I` option if you have already *doit* installed.
+  Use *pip*'s :option:`--ignore-installed` if you already have *doit* installed.
 
 
 
