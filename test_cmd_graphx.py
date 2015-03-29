@@ -67,6 +67,12 @@ class TestCmdGraphx(unittest.TestCase):
         got = output.getvalue()
         self.assertIn("fout.hdf5", got)
 
+        output = StringIO()
+        cmd = CmdFactory(Graphx, outstream=output, task_list=self.tasks())
+        cmd._execute(graph_type='json', deps='file')
+        got = output.getvalue()
+        self.assertNotIn("fout.hdf5", got)
+
     def test_children(self):
         my_task = Task("t2", [""], file_dep=['d2.txt'])
         output = StringIO()

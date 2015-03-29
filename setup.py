@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(name='doit-graphx',
       description='doit command plugin to generate graphs of tasks using networkx',
-      version='0.1.dev0',
+      version='0.1.dev1',
       license='MIT',
       author='XXX',
       author_email='XXX',

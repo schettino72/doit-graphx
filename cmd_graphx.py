@@ -33,7 +33,7 @@ def _match_prefix(items, prefix):
         return matched[0]
 
 
-def _draw_matplotlib_graph(graph, _, disp_params, **kws):
+def _draw_matplotlib_graph(graph, fname, disp_params, **kws):
     # TODO: maplotlib ignores fname
     from matplotlib import pyplot as plt
 
@@ -54,12 +54,12 @@ def _draw_matplotlib_graph(graph, _, disp_params, **kws):
     dep_type_styles = {
         # TASK-dependencies
         'task_dep': {'edge_color': 'k', 'style': 'dotted'},
-        'setup_dep': {'edge_color': 'm', },
+        'setup_tasks': {'edge_color': 'm', },
         'calc_dep': {'edge_color': 'g', },
         # DATA-dependencies
         'file_dep': {'edge_color': 'b', },
         'wild_dep': {'edge_color': 'b', 'style': 'dashed'},
-        'target':   {'edge_color': 'c', },
+        'targets':   {'edge_color': 'c', },
     }
 
     pos = nx.spring_layout(graph, dim=2)
@@ -157,7 +157,7 @@ opt_deps = {
     'type': str,
     'default': '',
     'help': "type of dependencies to include from selected tasks"
-            " (list of: ALL|file|wild|task|calc|setup|none|TODO:target)"
+            " (list of: ALL|file|wild|task|calc|setup|none|target)"
 }
 
 opt_show_status = {
@@ -288,19 +288,24 @@ class Graphx(DoitCmdBase):
                     dep_attributes_out[f_dep] = dep_attributes[f_dep]
                 return dep_attributes_out
 
-    def _prepare_graph(self, all_tasks_map, filter_task_names, filter_deps, show_status):
+    def _construct_graph(self, all_tasks_map, filter_task_names, no_children,
+                         filter_deps, show_status):
         """
-        Construct a *networkx* graph of nodes (Tasks/Files/Wildcards) and their dependencies (file/wildcard, task/setup,calc).
+        Construct a *networkx* graph of nodes (Tasks/Files/Wildcards) and 
+        their dependencies (file/wildcard, task/setup,calc).
 
-        :param filter_task_names: If None, graph includes all tasks
+        :param seq filter_task_names: If None, graph includes all tasks
+        :param str filter_deps: a list of prefixes separated with [,| ],
+                                If None, includes all deps
         """
 
         dep_attributes = {
             'task_dep':     {'node_type': 'task'},
-            'setup_tasks':  {'node_type': 'task', 'edge_type': 'setup_dep'},
+            'setup_tasks':  {'node_type': 'task'},
             'calc_dep':     {'node_type': 'task'},
             'file_dep':     {'node_type': 'file'},
             'wild_dep':     {'node_type': 'wildcard'},
+            'targets':      {'node_type': 'file'},
         }
 
         dep_attributes = Graphx._filter_dep_attributes_to_collect(
@@ -308,7 +313,7 @@ class Graphx(DoitCmdBase):
 
         graph = nx.DiGraph()
 
-        def add_graph_node(node, node_type, add_deps=False):
+        def add_graph_node(node, node_type):
             if node in graph:
                 return
             if node_type != 'task':
@@ -320,27 +325,19 @@ class Graphx(DoitCmdBase):
                     status = Graphx._get_task_status(self.dep_manager, task)
                 graph.add_node(node, type=node_type,
                                is_subtask=task.is_subtask, status=status)
-                if add_deps:
+                if filter_task_names is None or node in filter_task_names:
                     for dep, dep_kws in six.iteritems(dep_attributes):
                         for dname in getattr(task, dep):
-                            dig_deps = filter_task_names is None or dname in filter_task_names
                             add_graph_node(
-                                dname, dep_kws['node_type'], add_deps=dig_deps)
-                            graph.add_edge(
-                                node, dname, type=dep_kws.get('edge_type', dep))
-                    # Above loop cannot add targets
-                    #    because they are reversed.
-                    #
-                    # FIX: Targets are not filtered-out!!
-                    for dname in task.targets:
-                        add_graph_node(dname, 'file')
-                        graph.add_edge(dname, node, type='target')
+                                dname, dep_kws['node_type'])
+                            if dep == 'targets':
+                                edge = (dname, node)
+                            else:
+                                edge = (node, dname)
+                            graph.add_edge(*edge, type=dep)
 
-        # Add all named-tasks
-        #    and their dependencies.
-        #
         for tname in (filter_task_names or all_tasks_map.keys()):
-            add_graph_node(tname, 'task', add_deps=True)
+            add_graph_node(tname, 'task')
 
         return graph
 
@@ -390,7 +387,8 @@ class Graphx(DoitCmdBase):
                 task_names = Graphx._include_subtasks(
                     tasks_map, task_names, subtasks)
 
-        graph = self._prepare_graph(tasks_map, task_names, deps, show_status)
+        graph = self._construct_graph(
+            tasks_map, task_names, no_children, deps, show_status)
         graph_type, func = self._select_graph_func(graph, graph_type)
         out_file = self._prepare_out_file(out_file, graph_type)
         disp_params = dict(zip(['graph_type', 'show_status', 'deps', 'template'],
