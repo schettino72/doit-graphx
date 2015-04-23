@@ -1,7 +1,6 @@
 #! /usr/bin/env python
 import io
 import os
-import sys
 
 from setuptools import setup
 
@@ -17,11 +16,11 @@ def read_project_version():
     return fglobals['__version__']
 
 setup(name='doit-graphx',
-      description='doit command plugin to generate graphs of tasks using networkx',
+      description="doit command plugin to generate task dependency-graphs using networkx",
       version=read_project_version(),
       license='MIT',
-      author='XXX',
-      author_email='XXX',
+      author='Kostis Anagnostopoulos',
+      author_email='ankostis@gmail.com',
       url='https://github.com/pydoit/doit-graphx',
       classifiers=[
           'Development Status :: 3 - Alpha',
@@ -45,7 +44,7 @@ setup(name='doit-graphx',
           'Topic :: Scientific/Engineering',
       ],
 
-      py_modules=['cmd_graphx'],
+      py_modules=['cmd_graphx', '_version'],
       # TODO: Fatcor-out matplotlib in an extra-requires.
       install_requires=['networkx', 'matplotlib'],
       # doit>=0.28.0] # doit 0.28 unreleased
